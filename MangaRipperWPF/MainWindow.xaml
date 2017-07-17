@@ -27,6 +27,9 @@
         <DataGrid HorizontalAlignment="Left" Margin="10,52,0,263" VerticalAlignment="Stretch" MinHeight="227" MinWidth="425" >
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Chapter Name"/>
+                <DataGridTextColumn Header="Original Name"/>
+                <DataGridTextColumn Header="Prefix"/>
+                <DataGridTextColumn Header="Url"/>
             </DataGrid.Columns>
         </DataGrid>
         <DataGrid HorizontalAlignment="Stretch" Margin="492,52,10,58" VerticalAlignment="Stretch" MinHeight="227" MinWidth="425" >
