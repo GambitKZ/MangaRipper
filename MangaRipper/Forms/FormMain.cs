@@ -12,6 +12,7 @@ using MangaRipper.Core.Providers;
 using MangaRipper.Helpers;
 using MangaRipper.Presenters;
 using NLog;
+using MangaRipper.Core.Helpers;
 
 namespace MangaRipper.Forms
 {

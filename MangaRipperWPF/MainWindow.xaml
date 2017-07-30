@@ -5,65 +5,64 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:MangaRipperWPF"
         mc:Ignorable="d"
-        Title="MAngaRipper" Height="645" Width="1020" MinWidth="1020" MinHeight="640">
+        Title="MangaRipper" Height="645" Width="1020" MinWidth="1020" MinHeight="640" Loaded="FormMain_Loaded">
     <Grid>
         <Menu HorizontalAlignment="Left"  Margin="0,0,0,0" VerticalAlignment="Top" Width="Auto" Height="20" >
-            <MenuItem Header="Locations">
+            <MenuItem x:Name="locationToolStripMenuItem" Header="Locations">
                 <MenuItem Header="Data"/>
                 <MenuItem Header="Logs"/>
             </MenuItem>
-            <MenuItem Header="Documents">
+            <MenuItem x:Name="documentsToolStripMenuItem" Header="Documents">
                 <MenuItem Header="Wiki"/>
                 <MenuItem Header="Bug Report"/>
             </MenuItem>
-            <MenuItem Header="About"/>
+            <MenuItem x:Name="aboutToolStripMenuItem" Header="About"/>
         </Menu>
-        <Label Content="Url" HorizontalAlignment="Left" Margin="12,21,0,0" VerticalAlignment="Top"/>
-        <ComboBox HorizontalAlignment="Stretch" Margin="42,25,222,0" VerticalAlignment="Top" MinWidth="740" IsEditable="True"/>
-        <Button Content="B" HorizontalAlignment="Right" Margin="0,25,197,0" Height="23" Width="20"  VerticalAlignment="Top" />
-        <Button Content="R" HorizontalAlignment="Right" Margin="0,25,171,0" Height="23" Width="20"  VerticalAlignment="Top"/>
-        <TextBox HorizontalAlignment="Right" Height="23" Margin="0,25,129,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="37" IsEnabled="False" IsReadOnly="True"/>
-        <Button Content="Get Chapters" HorizontalAlignment="Right" Margin="0,24,8,0" Height="23" Width="116"  VerticalAlignment="Top"/>
-        <DataGrid HorizontalAlignment="Left" Margin="10,52,0,263" VerticalAlignment="Stretch" MinHeight="227" MinWidth="425" >
+        <Label x:Name="lblUrl" Content="Url" HorizontalAlignment="Left" Margin="12,21,0,0" VerticalAlignment="Top"/>
+        <ComboBox x:Name="cbTitleUrl" HorizontalAlignment="Stretch" Margin="42,25,222,0" VerticalAlignment="Top" MinWidth="740" IsEditable="True" Text="http://mangafox.me/manga/bleach/"/>
+        <Button x:Name="btnAddBookmark" Content="B" HorizontalAlignment="Right" Margin="0,25,197,0" Height="23" Width="20"  VerticalAlignment="Top" Click="btnAddBookmark_Click"/>
+        <Button x:Name="btnRemoveBookmark" Content="R" HorizontalAlignment="Right" Margin="0,25,171,0" Height="23" Width="20"  VerticalAlignment="Top" Click="btnRemoveBookmark_Click"/>
+        <TextBox x:Name="txtPercent" HorizontalAlignment="Right" Height="23" Margin="0,25,129,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="37" IsEnabled="False" IsReadOnly="True"/>
+        <Button x:Name="btnGetChapter" Content="Get Chapters" HorizontalAlignment="Right" Margin="0,24,8,0" Height="23" Width="116"  VerticalAlignment="Top" Click="btnGetChapter_Click"/>
+        <DataGrid x:Name="dgvChapter" HorizontalAlignment="Left" Margin="10,52,0,263" VerticalAlignment="Stretch" MinHeight="227" MinWidth="425" MaxWidth="425" AutoGenerateColumns="True" AutoGeneratingColumn="dgvChapter_AutoGeneratingColumn" MinRowHeight="21" FontSize="14" IsReadOnly="True" />
+        <DataGrid x:Name="dgvQueueChapter" HorizontalAlignment="Stretch" Margin="492,52,10,58" VerticalAlignment="Stretch" MinHeight="227" MinWidth="425" IsReadOnly="True" ItemsSource="{Binding}" AutoGenerateColumns="False" >
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Chapter Name"/>
-                <DataGridTextColumn Header="Original Name"/>
-                <DataGridTextColumn Header="Prefix"/>
-                <DataGridTextColumn Header="Url"/>
+                <DataGridTextColumn Header="Chapter Name" Width="*" MinWidth="200" CanUserSort="False" CanUserReorder="False" Binding="{Binding Path=Name}" />
+                <DataGridTextColumn Header="%" Width="35" CanUserSort="False" CanUserReorder="False" CanUserResize="False" MaxWidth="35" MinWidth="35" Binding="{Binding Path=Percent}" />
+                <DataGridTextColumn Header="Save To" Width="*" MinWidth="200" CanUserSort="False" CanUserReorder="False" Binding="{Binding Path=SaveToFolder}"/>
+                <DataGridTextColumn Header="Formats" MaxWidth="70" CanUserSort="False" CanUserReorder="False" Binding="{Binding Path=PropFormats}" />
             </DataGrid.Columns>
         </DataGrid>
-        <DataGrid HorizontalAlignment="Stretch" Margin="492,52,10,58" VerticalAlignment="Stretch" MinHeight="227" MinWidth="425" >
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="Chapter Name" MinWidth="200" CanUserSort="False" CanUserReorder="False"/>
-                <DataGridTextColumn Header="%" Width="35" CanUserSort="False" CanUserReorder="False" CanUserResize="False" MaxWidth="35" MinWidth="35"/>
-                <DataGridTextColumn Header="Save To" MinWidth="200" CanUserSort="False" CanUserReorder="False"/>
-                <DataGridTextColumn Header="Formats" MaxWidth="70" CanUserSort="False" CanUserReorder="False" />
-            </DataGrid.Columns>
-        </DataGrid>
-        <Button Content="4" HorizontalAlignment="Left" Margin="440,105,0,0" VerticalAlignment="Top" MinWidth="47" MinHeight="30" FontFamily="Webdings" FontSize="18"/>
-        <Button Content="8" HorizontalAlignment="Left" Margin="440,159,0,0" VerticalAlignment="Top" MinWidth="47" MinHeight="30" FontFamily="Webdings" FontSize="18"/>
-        <Label Content="Save Destination" HorizontalAlignment="Left" Margin="10,0,0,232" VerticalAlignment="Bottom" FontSize="16"/>
-        <TextBox HorizontalAlignment="Left" Height="23" Margin="10,0,0,209" TextWrapping="Wrap" VerticalAlignment="Bottom" Width="425"/>
-        <Button Content="..." HorizontalAlignment="Left" Margin="405,0,0,237" VerticalAlignment="Bottom" Width="30"/>
+        <Button x:Name="btnAdd" Content="4" HorizontalAlignment="Left" Margin="440,105,0,0" VerticalAlignment="Top" MinWidth="47" MinHeight="30" FontFamily="Webdings" FontSize="18" Click="btnAdd_Click"/>
+        <Button x:Name="btnAddAll" Content="8" HorizontalAlignment="Left" Margin="440,159,0,0" VerticalAlignment="Top" MinWidth="47" MinHeight="30" FontFamily="Webdings" FontSize="18" Click="btnAddAll_Click"/>
+        <Label x:Name="lbDestination" Content="Save Destination" HorizontalAlignment="Left" Margin="10,0,0,232" VerticalAlignment="Bottom" FontSize="16"/>
+        <TextBox x:Name="txtSaveTo" HorizontalAlignment="Left" Height="23" Margin="10,0,0,209" TextWrapping="Wrap" VerticalAlignment="Bottom" Width="425"/>
+        <Button x:Name="btnChangeSaveTo" Content="..." HorizontalAlignment="Left" Margin="405,0,0,237" VerticalAlignment="Bottom" Width="30"/>
         <Canvas  HorizontalAlignment="Left" Height="28" Margin="10,0,0,181" VerticalAlignment="Bottom" Width="115" RenderTransformOrigin="0.5,0.5" >
-            <CheckBox Content="Folder" IsChecked="True" HorizontalAlignment="Left" VerticalAlignment="Top" Canvas.Left="10" Canvas.Top="7"/>
-            <CheckBox Content="CBZ" HorizontalAlignment="Left" VerticalAlignment="Top" Canvas.Left="68" Canvas.Top="7" RenderTransformOrigin="0.417,-0.095"/>
+            <CheckBox x:Name="cbSaveFolder" Content="Folder" IsChecked="True" HorizontalAlignment="Left" VerticalAlignment="Top" Canvas.Left="10" Canvas.Top="7"/>
+            <CheckBox x:Name="cbSaveCbz" Content="CBZ" HorizontalAlignment="Left" VerticalAlignment="Top" Canvas.Left="68" Canvas.Top="7" RenderTransformOrigin="0.417,-0.095"/>
         </Canvas>
         <Canvas HorizontalAlignment="Left" Height="28" Margin="154,0,0,181" VerticalAlignment="Bottom" Width="281">
-            <CheckBox Content="Prefix Counter" HorizontalAlignment="Left" VerticalAlignment="Top" Canvas.Left="10" Canvas.Top="7"/>
-            <CheckBox Content="Save in Series Folder" HorizontalAlignment="Left" VerticalAlignment="Top" RenderTransformOrigin="0.113,-4.277" Canvas.Left="110" Canvas.Top="7"/>
+            <CheckBox x:Name="checkBoxForPrefix" Content="Prefix Counter" HorizontalAlignment="Left" VerticalAlignment="Top" Canvas.Left="10" Canvas.Top="7"/>
+            <CheckBox x:Name="cbUseSeriesFolder" Content="Save in Series Folder" HorizontalAlignment="Left" VerticalAlignment="Top" RenderTransformOrigin="0.113,-4.277" Canvas.Left="110" Canvas.Top="7"/>
         </Canvas>
-        <DataGrid HorizontalAlignment="Left" Height="135" Margin="10,0,0,36" VerticalAlignment="Bottom" Width="425">
+        <DataGrid x:Name="dgvSupportedSites" HorizontalAlignment="Left" Height="135" Margin="10,0,0,36" VerticalAlignment="Bottom" Width="425"  ItemsSource="{Binding Sites}" AutoGenerateColumns="False" HorizontalScrollBarVisibility="Disabled" IsHitTestVisible="True" CanUserSortColumns="False" CanUserResizeColumns="False" CanUserReorderColumns="False" CanUserResizeRows="False" SelectionMode="Single" IsReadOnly="True" >
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Name" MinWidth="120" CanUserSort="False" CanUserReorder="False"/>
-                <DataGridTextColumn Header="Address" Width="212" CanUserSort="False" CanUserReorder="False"/>
-                <DataGridTextColumn Header="Language" MinWidth="90" CanUserSort="False" CanUserReorder="False"/>
+                <DataGridTextColumn Header="Name" MinWidth="120" CanUserSort="False" CanUserReorder="False" Binding="{Binding Path=Name}" />
+                <DataGridHyperlinkColumn  Header="Address" Width="212" CanUserSort="False" CanUserReorder="False" Binding="{Binding Path=Address}">
+                    <DataGridHyperlinkColumn.ElementStyle>
+                        <Style>
+                            <EventSetter Event="Hyperlink.Click" Handler="WebSite_Hyperlink_Click"/>
+                        </Style>
+                    </DataGridHyperlinkColumn.ElementStyle>
+                </DataGridHyperlinkColumn>
+                <DataGridTextColumn Header="Language" MinWidth="90" CanUserSort="False" CanUserReorder="False" Binding="{Binding Path=Language}" />
             </DataGrid.Columns>
         </DataGrid>
-        <Button Content="Remove Selected" HorizontalAlignment="Left" Margin="492,0,0,28" VerticalAlignment="Bottom" Width="102" Height="25"/>
-        <Button Content="Remove All" HorizontalAlignment="Left" Margin="599,0,0,28" VerticalAlignment="Bottom" Width="95" Height="25" RenderTransformOrigin="0.389,-0.114"/>
-        <Button Content="Start Download" HorizontalAlignment="Stretch" Margin="700,0,119,28" VerticalAlignment="Bottom" MinWidth="180" Height="25"/>
-        <Button Content="Stop" HorizontalAlignment="Right" Margin="0,0,10,28" VerticalAlignment="Bottom" Width="105" Height="25"/>
-        <TextBox HorizontalAlignment="Stretch"  Margin="2,570,2,2" TextWrapping="Wrap" VerticalAlignment="Bottom" Width="Auto" MinHeight="20" Height="20" MaxHeight="20" IsReadOnly="True"/>
+        <Button x:Name="btnRemove" Content="Remove Selected" HorizontalAlignment="Left" Margin="492,0,0,28" VerticalAlignment="Bottom" Width="102" Height="25"/>
+        <Button x:Name="btnRemoveAll" Content="Remove All" HorizontalAlignment="Left" Margin="599,0,0,28" VerticalAlignment="Bottom" Width="95" Height="25" RenderTransformOrigin="0.389,-0.114"/>
+        <Button x:Name="btnDownload" Content="Start Download" HorizontalAlignment="Stretch" Margin="700,0,119,28" VerticalAlignment="Bottom" MinWidth="180" Height="25"/>
+        <Button x:Name="btnStop" Content="Stop" HorizontalAlignment="Right" Margin="0,0,10,28" VerticalAlignment="Bottom" Width="105" Height="25"/>
+        <TextBox x:Name="txtMessage" HorizontalAlignment="Stretch"  Margin="2,570,2,2" TextWrapping="Wrap" VerticalAlignment="Bottom" Width="Auto" MinHeight="20" Height="20" MaxHeight="20" IsReadOnly="True"/>
     </Grid>
 </Window>

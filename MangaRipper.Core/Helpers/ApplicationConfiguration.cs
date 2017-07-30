@@ -7,9 +7,9 @@ using MangaRipper.Core.Models;
 using Newtonsoft.Json;
 using NLog;
 
-namespace MangaRipper.Helpers
+namespace MangaRipper.Core.Helpers
 {
-    internal class ApplicationConfiguration
+    public class ApplicationConfiguration
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
@@ -71,7 +71,7 @@ namespace MangaRipper.Helpers
                 throw new ArgumentNullException(nameof(objectToStore));
             }
 
-            Logger.Info("> SaveObject(): " + Core.Extensions.ExtensionHelper.SanitizeUserName(fileName));
+            Logger.Info("> SaveObject(): " + MangaRipper.Core.Extensions.ExtensionHelper.SanitizeUserName(fileName));
             var serializer = new JsonSerializer();
             using (var sw = new StreamWriter(fileName))
             using (JsonWriter writer = new JsonTextWriter(sw))
@@ -90,7 +90,7 @@ namespace MangaRipper.Helpers
             var result = default(T);
             try
             {
-                Logger.Info("> LoadObject(): " + Core.Extensions.ExtensionHelper.SanitizeUserName(fileName));
+                Logger.Info("> LoadObject(): " + Extensions.ExtensionHelper.SanitizeUserName(fileName));
 
                 var serializer = new JsonSerializer();
 

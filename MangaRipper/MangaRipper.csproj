@@ -110,9 +110,6 @@
     <Compile Include="Forms\AboutBox.designer.cs">
       <DependentUpon>AboutBox.cs</DependentUpon>
     </Compile>
-    <Compile Include="Helpers\ApplicationConfiguration.cs" />
-    <Compile Include="Helpers\CommonSettings.cs" />
-    <Compile Include="Helpers\UpdateNotification.cs" />
     <Compile Include="Presenters\IMainView.cs" />
     <Compile Include="Presenters\MainViewPresenter.cs" />
     <Compile Include="Program.cs" />
@@ -186,6 +183,9 @@
       <Project>{13EFFE36-DBB8-4573-9260-B601177F66E3}</Project>
       <Name>MangaRipper.Core</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Helpers\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

@@ -1,15 +1,9 @@
-﻿using System.Drawing;
-using System.Windows.Forms;
-
-namespace MangaRipper.Helpers
+﻿namespace MangaRipper.Core.Models
 {
     public class CommonSettings
     {
         public string SaveTo { get; set; }
         public string Url { get; set; }
-        public Size WindowSize { get; set; }
-        public Point Location { get; set; }
-        public FormWindowState WindowState { get; set; }
         public bool CbzChecked { get; set; }
         public bool PrefixChecked { get; set; }
 
