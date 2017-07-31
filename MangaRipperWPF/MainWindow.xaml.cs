@@ -42,6 +42,29 @@ namespace MangaRipperWPF
             set;
         }
 
+        public void SetStatusText(string statusMessage)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                txtMessage.Text = statusMessage;
+            });
+        }
+
+        private void LoadBookmark()
+        {
+            var bookmarks = _appConf.LoadBookMarks();
+            cbTitleUrl.Items.Clear();
+            var sc = bookmarks;
+            if (sc == null)
+            {
+                return;
+            }
+            foreach (var item in sc)
+            {
+                cbTitleUrl.Items.Add(item);
+            }
+        }
+
         public MainWindow()
         {
             Logger.Info("> Main()");
@@ -70,26 +93,11 @@ namespace MangaRipperWPF
             Logger.Info("< Main()");
         }
 
-        private void GetMangaWebSites()
-        {
-            try
-            {
-                foreach (var service in FrameworkProvider.GetMangaServices())
-                {
-                    var infor = service.GetInformation();
-                    dgvSupportedSites.Items.Add(new { Name = infor.Name, Address = infor.Link, Language = infor.Language });
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Error(ex, ex.Message);
-            }
-        }
+        #region Actions when Form is Loaded
 
         private void FormMain_Loaded(object sender, RoutedEventArgs e)
         {
             CheckForUpdate();
-            FindChaptersClicked += OnFindChapters;
         }
 
         private async void CheckForUpdate()
@@ -116,59 +124,9 @@ namespace MangaRipperWPF
             }
         }
 
-        private void LoadBookmark()
-        {
-            var bookmarks = _appConf.LoadBookMarks();
-            cbTitleUrl.Items.Clear();
-            var sc = bookmarks;
-            if (sc == null)
-            {
-                return;
-            }
-            foreach (var item in sc)
-            {
-                cbTitleUrl.Items.Add(item);
-            }
-        }
+        #endregion        
 
-        public void SetChaptersProgress(string progress)
-        {
-            Dispatcher.Invoke(() =>
-            {
-                txtPercent.Text = progress;
-            });
-        }
-
-        public void SetStatusText(string statusMessage)
-        {
-            Dispatcher.Invoke(() =>
-            {
-                txtMessage.Text = statusMessage;
-            });
-        }
-
-        public void EnableDownload()
-        {
-            Dispatcher.Invoke(() =>
-            {
-                btnGetChapter.IsEnabled = true;
-            });
-        }
-
-        public void SetChapters(IEnumerable<Chapter> chapters)
-        {
-            EnableDownload();
-            Dispatcher.Invoke(() =>
-            {
-                dgvChapter.ItemsSource = chapters.ToList();
-            });
-
-            //dgvChapter.DataSource = chapters.ToList();
-            //PrefixLogic();
-            //PrepareSpecificDirectory();
-        }
-
-        public Func<string, Task> FindChaptersClicked { get; set; }
+        #region Work with Bookmarks
 
         private void btnAddBookmark_Click(object sender, RoutedEventArgs e)
         {
@@ -188,6 +146,10 @@ namespace MangaRipperWPF
             _appConf.SaveBookmarks(sc);
             LoadBookmark();
         }
+
+        #endregion
+
+        #region Get all chapters from Url
 
         private async void btnGetChapter_Click(object sender, RoutedEventArgs e)
         {
@@ -230,6 +192,34 @@ namespace MangaRipperWPF
                 };
             }
         }
+        public void SetChapters(IEnumerable<Chapter> chapters)
+        {
+            EnableDownload();
+            Dispatcher.Invoke(() =>
+            {
+                dgvChapter.ItemsSource = chapters.ToList();
+            });
+        }
+
+        public void EnableDownload()
+        {
+            Dispatcher.Invoke(() =>
+            {
+                btnGetChapter.IsEnabled = true;
+            });
+        }
+
+        public void SetChaptersProgress(string progress)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                txtPercent.Text = progress;
+            });
+        }
+
+        #endregion
+
+        #region Additional operations on Window with All Existing Chapters
 
         private void dgvChapter_AutoGeneratingColumn(object sender, DataGridAutoGeneratingColumnEventArgs e)
         {
@@ -247,11 +237,35 @@ namespace MangaRipperWPF
             }
         }
 
+        #endregion
+
+        #region Window with List of WebSites 
+
+        private void GetMangaWebSites()
+        {
+            try
+            {
+                foreach (var service in FrameworkProvider.GetMangaServices())
+                {
+                    var infor = service.GetInformation();
+                    dgvSupportedSites.Items.Add(new { Name = infor.Name, Address = infor.Link, Language = infor.Language });
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, ex.Message);
+            }
+        }
+
         private void WebSite_Hyperlink_Click(object sender, RoutedEventArgs e)
         {
             Hyperlink link = (Hyperlink)e.OriginalSource;
             Process.Start(link.NavigateUri.AbsoluteUri);
         }
+
+        #endregion
+
+        #region Adding Chapters to Queue
 
         private void btnAdd_Click(object sender, RoutedEventArgs e)
         {
@@ -262,11 +276,17 @@ namespace MangaRipperWPF
             }
 
             AddToDownloadQueue(formats, dgvChapter.SelectedItems);
+        }
 
-            //foreach (var row in rows)
-            //{
-            //    dgvQueueChapter.Items.Add(row);
-            //}
+        private void btnAddAll_Click(object sender, RoutedEventArgs e)
+        {
+            var formats = GetOutputFormats().ToArray();
+            if (!CanBeAdded(formats))
+            {
+                return;
+            }
+
+            AddToDownloadQueue(formats, dgvChapter.Items);
         }
 
         private IEnumerable<OutputFormat> GetOutputFormats()
@@ -320,16 +340,143 @@ namespace MangaRipperWPF
             }
         }
 
-        private void btnAddAll_Click(object sender, RoutedEventArgs e)
+        #endregion
+
+        #region Additional Operations on Chapters
+
+        private void btnRemove_Click(object sender, RoutedEventArgs e)
         {
-            var formats = GetOutputFormats().ToArray();
-            if (!CanBeAdded(formats))
+            List<DownloadChapterTask> chaptersForRemoval = new List<DownloadChapterTask>();
+
+            foreach (var item in dgvQueueChapter.SelectedItems)
             {
-                return;
+                var chapter = (DownloadChapterTask)item;
+
+                if (!chapter.IsBusy)
+                {
+                    chaptersForRemoval.Add(chapter);
+                }
             }
 
-            AddToDownloadQueue(formats, dgvChapter.Items);
+            ChapterDeletion(chaptersForRemoval);
         }
-        
+
+        private void btnRemoveAll_Click(object sender, RoutedEventArgs e)
+        {
+            var removeItems = _downloadQueue.Where(r => !r.IsBusy).ToList();
+
+            ChapterDeletion(removeItems);
+        }
+
+        private void ChapterDeletion(ICollection<DownloadChapterTask> chaptersForRemoval)
+        {
+            if (chaptersForRemoval.Count > 0)
+            {
+                foreach (var chapter in chaptersForRemoval)
+                {
+                    _downloadQueue.Remove(chapter);
+                }
+            }
+        }
+
+        private void btnStop_Click(object sender, RoutedEventArgs e)
+        {
+            FrameworkProvider.GetWorker().Cancel();
+        }
+
+        #endregion
+
+        #region Manga Download Processes
+
+        private async void btnDownload_ClickAsync(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                btnDownload.IsEnabled = false;
+                await StartDownload();
+            }
+            catch (OperationCanceledException ex)
+            {
+                SetStatusText(@"Download canceled! Reason: " + ex.Message);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex);
+                MessageBox.Show(ex.Message, ex.Source, MessageBoxButton.OKCancel, MessageBoxImage.Information);
+                SetStatusText(@"Download canceled! Reason: " + ex.Message);
+            }
+            finally
+            {
+                btnDownload.IsEnabled = true;
+            }
+        }
+
+        private async Task StartDownload()
+        {
+            while (_downloadQueue.Count > 0)
+            {
+                var chapter = _downloadQueue.First();
+                var worker = FrameworkProvider.GetWorker();
+
+                await worker.RunDownloadTaskAsync(chapter, new Progress<int>(c =>
+                {
+                    UpdatePercent(chapter, c);
+                }));
+
+                Dispatcher.Invoke(() =>
+                {
+                    _downloadQueue.Remove(chapter);
+                });
+            }
+        }
+
+        private void UpdatePercent(DownloadChapterTask chapter, int percent)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                foreach (var item in dgvQueueChapter.Items)
+                {
+                    var chapterTask = item as DownloadChapterTask;
+                    if (chapter == chapterTask)
+                    {
+
+                        chapter.Percent = percent;
+
+                    }
+                }
+
+                dgvQueueChapter.Items.Refresh();
+            });
+        }
+
+        #endregion
+
+        #region Save To Destination Logic
+
+        private void btnOpenFolder_Click(object sender, RoutedEventArgs e)
+        {
+            if (Directory.Exists(SaveDestination))
+            {
+                Process.Start(SaveDestination);
+            }
+            else
+            {
+                MessageBox.Show($"Directory \"{SaveDestination}\" doesn't exist.");
+            }
+        }
+
+        private void btnChangeSaveTo_Click(object sender, RoutedEventArgs e)
+        {
+            System.Windows.Forms.FolderBrowserDialog browse = new System.Windows.Forms.FolderBrowserDialog();
+
+            System.Windows.Forms.DialogResult result = browse.ShowDialog();
+
+            if (result == System.Windows.Forms.DialogResult.OK)
+            {
+                txtSaveTo.Text = browse.SelectedPath;
+            }
+        }
+
+        #endregion
     }
 }
