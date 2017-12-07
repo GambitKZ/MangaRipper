@@ -65,11 +65,26 @@ namespace MangaRipperWPF
             }
         }
 
+        private void PrefixLogic()
+        {
+            List<Chapter> chaptersContainer = new List<Chapter>();
+
+            foreach (var row in dgvChapter.Items)
+            {
+                chaptersContainer.Add(row as Chapter);
+            }
+
+            //var chapters = (from DataGridRow row in dgvChapter.Items select row as Chapter).ToList();
+            chaptersContainer.Reverse();
+            chaptersContainer.ForEach(r => r.Prefix = checkBoxForPrefix.IsChecked.Value ? chaptersContainer.IndexOf(r) + 1 : 0);
+            chaptersContainer.Reverse();
+            dgvChapter.DataSource = chapters;
+        }
+
         public MainWindow()
         {
             Logger.Info("> Main()");
             InitializeComponent();
-            var appDomain = AppDomain.CurrentDomain;
 
             // Initialize config and plugins
             FrameworkProvider.Init(Path.Combine(Environment.CurrentDirectory, "Plugins"),
@@ -194,10 +209,13 @@ namespace MangaRipperWPF
         }
         public void SetChapters(IEnumerable<Chapter> chapters)
         {
-            EnableDownload();
+            EnableDownload();            
+
             Dispatcher.Invoke(() =>
-            {
+            {                
                 dgvChapter.ItemsSource = chapters.ToList();
+                PrefixLogic();
+                PrepareSpecificDirectory();
             });
         }
 
