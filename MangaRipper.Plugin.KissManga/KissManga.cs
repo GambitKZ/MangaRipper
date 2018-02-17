@@ -1,9 +1,6 @@
 ﻿using MangaRipper.Core.CustomException;
-using MangaRipper.Core.Helpers;
 using MangaRipper.Core.Interfaces;
 using MangaRipper.Core.Models;
-using MangaRipper.Core.Services;
-using NLog;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,72 +13,134 @@ namespace MangaRipper.Plugin.KissManga
     /// <summary>
     /// Support find chapters and images from KissManga
     /// </summary>
-    public class KissManga : MangaService
+    public class KissManga : IMangaService
     {
-        private static Logger _logger = LogManager.GetCurrentClassLogger();
-        private string _iv = "a5e8e2e9c2721be0a84ad660c472c1f3";
-        private string _chko = "72nnasdasd9asdn123";
+        private static ILogger _logger;
+        private readonly IDownloader downloader;
+        private IScriptEngine _engine;
+        private readonly IXPathSelector selector;
 
-        private KissMangaTextDecryption _decryptor;
-
-        public KissManga()
+        public KissManga(ILogger myLogger, IDownloader downloader, IXPathSelector selector, IScriptEngine engine)
         {
-            _decryptor = new KissMangaTextDecryption(_iv, _chko);
+            _logger = myLogger;
+            this.downloader = downloader;
+            this._engine = engine;
+            this.selector = selector;
         }
 
-        public override void Configuration(IEnumerable<KeyValuePair<string, object>> settings)
+        public async Task<IEnumerable<Chapter>> FindChapters(string manga, IProgress<int> progress, CancellationToken cancellationToken)
         {
-            var settingCollection = settings.ToArray();
-            if (settingCollection.Any(i => i.Key.Equals("IV")))
-            {
-                var iv = settingCollection.First(i => i.Key.Equals("IV")).Value;
-                _logger.Info($@"Current IV: {_iv}. New IV: {iv}");
-                _iv = iv as string;
-            }
-            if (settingCollection.Any(i => i.Key.Equals("Chko")))
-            {
-                var chko = settingCollection.First(i => i.Key.Equals("Chko")).Value;
-                _logger.Info($@"Current Chko: {_chko}. New Chko: {chko}");
-                _chko = chko as string;
-            }
-            _decryptor = new KissMangaTextDecryption(_iv, _chko);
-        }
-
-        public override async Task<IEnumerable<Chapter>> FindChapters(string manga, IProgress<int> progress, CancellationToken cancellationToken)
-        {
-            var downloader = new DownloadService();
-            var parser = new ParserHelper();
             progress.Report(0);
             // find all chapters in a manga
-            string input = await downloader.DownloadStringAsync(manga);
-            var chaps = parser.ParseGroup("<td>\\s+<a\\s+href=\"(?=/Manga/)(?<Value>.[^\"]*)\"\\s+title=\"(?<Name>.[^\"]*)\"", input, "Name", "Value");
-            chaps = chaps.Select(c => NameResolver(c.Name, c.Url, new Uri(manga)));
+            string input = await downloader.DownloadStringAsync(manga, cancellationToken);
+            var title = selector.Select(input, "//a[@class='bigChar']").InnerHtml;
+            var chaps = selector.SelectMany(input, "//tr/td/a[@title]")
+                .Select(n =>
+                {
+                    string name = n.InnerHtml.Trim();
+                    string url = n.Attributes["href"];
+                    var chap = NameResolver(name, url, new Uri(manga));
+                    chap.Manga = title;
+                    return chap;
+                });
             progress.Report(100);
             return chaps;
         }
 
-        public override async Task<IEnumerable<string>> FindImages(Chapter chapter, IProgress<int> progress, CancellationToken cancellationToken)
+        public async Task<IEnumerable<string>> FindImages(Chapter chapter, IProgress<int> progress, CancellationToken cancellationToken)
         {
-            var downloader = new DownloadService();
-            var parser = new ParserHelper();
-            string input = await downloader.DownloadStringAsync(chapter.Url);
-            var encryptPages = parser.Parse("lstImages.push\\(wrapKA\\(\"(?<Value>.[^\"]*)\"\\)\\)", input, "Value");
-            var pages = encryptPages.Select(e => _decryptor.DecryptFromBase64(e));
-            // transform pages link
-            pages = pages.Select(p =>
+            string input = await downloader.DownloadStringAsync(chapter.Url, cancellationToken);
+
+            /// Could be secured against changes by capturing the script's path as it exists in the live document instead of assuming the location.
+            string pattern = "<script\\s+(type=[\"']text/javascript[\"'])?\\s+(src=[\"']/Scripts/{0}[\"'])>";
+            string concatedPattern = string.Concat(string.Format(pattern, "ca.js"), "|", string.Format(pattern, "lo.js"));
+
+            if (Regex.IsMatch(input, concatedPattern, RegexOptions.IgnoreCase | RegexOptions.Compiled))
             {
-                var value = new Uri(new Uri(chapter.Url), p).AbsoluteUri;
-                return value;
-            }).ToList();
-            return pages;
+                string funcUri = "http://kissmanga.com/Scripts/lo.js";
+                string decryptFunc = await downloader.DownloadStringAsync(funcUri, cancellationToken);
+
+                /// Execute CryptoJS (ca.js) from saved resources to reduce HTTP requests.
+                _engine.Execute(Properties.Resources.CryptoJs);
+
+                /// Execute the decryption function to allow it to be called later.
+                _engine.Execute(decryptFunc);
+
+                var keysPattern = "<script type=\"text/javascript\">[\\s]*(?<Value>.*)(?!</script>)";
+                var regex = new Regex(keysPattern, RegexOptions.Compiled | RegexOptions.IgnoreCase);
+                var keys = new List<string>();
+
+                foreach (Match match in regex.Matches(input))
+                {
+                    if (match.Value.Contains("CryptoJS"))
+                    {
+                        var value = match.Groups["Value"].Value;
+                        keys.Add(value);
+                        _logger.Debug($"Script to be executed: {value}");
+                    }
+                }
+
+                if (keys.Count > 0)
+                {
+                    try
+                    {
+                        keys.ForEach(key => _engine.Execute(key));
+                    }
+                    catch (Exception)
+                    {
+                        _logger.Fatal($"Source: {input}");
+                        throw new ArgumentException("Cannot decrypt image URIs.");
+                    }
+                }
+                else
+                {
+                    _logger.Debug("Keys not found. Continuing.");
+                }
+
+                /// As with the script locations, to avoid unnecessary breaking the application, the function name could be captured and invoked 
+                /// in the event it changes.
+                /// 
+
+                var encryptPages = Parse("lstImages.push\\(wrapKA\\(\"(?<Value>.[^\"]*)\"\\)\\)", input, "Value");
+
+                var pages = encryptPages.Select(e =>
+                {
+                    string value = string.Empty;
+
+                    try
+                    {
+                        value = _engine.CallGlobalFunction<string>("wrapKA", e);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Fatal($"Source: {input}");
+                        _logger.Fatal(ex);
+                        throw;
+                    }
+
+                    return value;
+                });
+
+
+                pages = pages.Select(p =>
+                {
+                    var value = new Uri(new Uri(chapter.Url), p).AbsoluteUri;
+                    return value;
+                }).ToList();
+
+                return pages;
+            }
+
+            return null;
+
         }
 
-        public override SiteInformation GetInformation()
+        public SiteInformation GetInformation()
         {
             return new SiteInformation("KissManga", "http://kissmanga.com/", "English");
         }
 
-        public override bool Of(string link)
+        public bool Of(string link)
         {
             return new Uri(link).Host.Equals("kissmanga.com");
         }
@@ -96,6 +155,25 @@ namespace MangaRipper.Plugin.KissManga
                 name = Regex.Replace(name, "\\s+Read\\s+Online$", string.Empty, RegexOptions.IgnoreCase | RegexOptions.Compiled);
             }
             return new Chapter(name, urle.AbsoluteUri);
+        }
+
+        private IEnumerable<string> Parse(string regExp, string input, string groupName)
+        {
+            _logger.Info($"> Parse: {regExp}");
+            var reg = new Regex(regExp, RegexOptions.IgnoreCase);
+            var matches = reg.Matches(input);
+
+            if (matches.Count == 0)
+            {
+                _logger.Error("Cannot parse the below content.");
+                _logger.Error(input);
+                throw new MangaRipperException("Parse content failed! Please check if you can access this content on your browser.");
+            }
+
+            var list = (from Match match in matches select match.Groups[groupName].Value.Trim()).ToList();
+            var result = list.Distinct().ToList();
+            _logger.Info($@"Parse success. There are {result.Count} item(s).");
+            return result;
         }
     }
 }

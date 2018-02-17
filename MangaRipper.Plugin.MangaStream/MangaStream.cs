@@ -1,72 +1,82 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using MangaRipper.Core.Helpers;
 using MangaRipper.Core.Interfaces;
 using MangaRipper.Core.Models;
-using MangaRipper.Core.Services;
-using NLog;
 
 namespace MangaRipper.Plugin.MangaStream
 {
     /// <summary>
     /// Support find chapters, images from MangaStream
     /// </summary>
-    public class MangaStream : MangaService
+    public class MangaStream : IMangaService
     {
-        private static Logger logger = LogManager.GetCurrentClassLogger();
+        private static ILogger logger;
+        private readonly IDownloader downloader;
+        private readonly IXPathSelector selector;
 
-        public override async Task<IEnumerable<Chapter>> FindChapters(string manga, IProgress<int> progress,
+        public MangaStream(ILogger myLogger, IDownloader downloader, IXPathSelector selector)
+        {
+            logger = myLogger;
+            this.downloader = downloader;
+            this.selector = selector;
+        }
+        public async Task<IEnumerable<Chapter>> FindChapters(string manga, IProgress<int> progress,
             CancellationToken cancellationToken)
         {
-            var downloader = new DownloadService();
-            var parser = new ParserHelper();
             progress.Report(0);
             // find all chapters in a manga
-            string input = await downloader.DownloadStringAsync(manga);
-            string regEx = "<td><a href=\"(?<Value>http://mangastream.com/r/[^\"]+)\">(?<Name>[^<]+)</a>";
-            var chaps = parser.ParseGroup(regEx, input, "Name", "Value");
+            string input = await downloader.DownloadStringAsync(manga, cancellationToken);
+            var title = selector.Select(input, "//h1").InnerHtml;
+            var chaps = selector
+                .SelectMany(input, "//td/a")
+                .Select(n =>
+                {
+                    string url = $"https://readms.net{n.Attributes["href"]}";
+                    return new Chapter(n.InnerHtml, url) { Manga = title };
+                });
             progress.Report(100);
             return chaps;
         }
 
-        public override async Task<IEnumerable<string>> FindImages(Chapter chapter, IProgress<int> progress,
+        public async Task<IEnumerable<string>> FindImages(Chapter chapter, IProgress<int> progress,
             CancellationToken cancellationToken)
         {
-            var downloader = new DownloadService();
-            var parser = new ParserHelper();
-
             // find all pages in a chapter
-            string input = await downloader.DownloadStringAsync(chapter.Url);
-            string regExPages =
-                "<li><a href=\"(?<Value>http://mangastream.com/r/[^\"]+)\">[^<]+</a>";
-            var pages = parser.Parse(regExPages, input, "Value");
+            string input = await downloader.DownloadStringAsync(chapter.Url, cancellationToken);
+            var pages = selector.SelectMany(input, "//div[contains(@class,'btn-reader-page')]/ul/li/a")
+                .Select(n => n.Attributes["href"])
+                .Select(p => $"https://readms.net{p}");
 
             // find all images in pages
-            var pageData = await downloader.DownloadStringAsync(pages, new Progress<int>((count) =>
+            int current = 0;
+            var images = new List<string>();
+            foreach (var page in pages)
             {
-                var f = (float) count / pages.Count();
+                var pageHtml = await downloader.DownloadStringAsync(page, cancellationToken);
+                var image = selector
+                .Select(pageHtml, "//img[@id='manga-page']")
+                .Attributes["src"];
+
+                images.Add(image);
+                var f = (float)++current / pages.Count();
                 int i = Convert.ToInt32(f * 100);
                 progress.Report(i);
-            }), cancellationToken);
-            var images = parser.Parse("<img id=\"manga-page\" src=\"(?<Value>[^\"]+)\"/>", pageData,
-                "Value");
-
-            return images;
+            }
+            return images.Select(i => $"https:{i}");
         }
 
-        public override SiteInformation GetInformation()
+        public SiteInformation GetInformation()
         {
-            return new SiteInformation(nameof(MangaStream), "http://mangastream.com/manga", "English");
+            return new SiteInformation(nameof(MangaStream), "http://readms.net/manga", "English");
         }
 
-        public override bool Of(string link)
+        public bool Of(string link)
         {
             var uri = new Uri(link);
-            return uri.Host.Equals("mangastream.com");
+            return uri.Host.Equals("readms.net");
         }
     }
 }

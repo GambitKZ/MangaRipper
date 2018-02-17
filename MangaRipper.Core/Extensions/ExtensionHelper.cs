@@ -30,9 +30,35 @@ namespace MangaRipper.Core.Extensions
         public static void CopyFolderAndAllSubItems(DirectoryInfo source, DirectoryInfo destination)
         {
             foreach (DirectoryInfo dir in source.GetDirectories())
+            {
                 CopyFolderAndAllSubItems(dir, destination.CreateSubdirectory(dir.Name));
+            }
             foreach (FileInfo file in source.GetFiles())
-                file.CopyTo(Path.Combine(destination.FullName, file.Name));
+            {
+                string destFileName = Path.Combine(destination.FullName, file.Name);
+                if (!File.Exists(destFileName))
+                {
+                    file.CopyTo(destFileName);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Replaces the user's name with a generic placeholder to protect their privacy.
+        /// </summary>
+        /// <param name="input"></param>
+        /// <returns></returns>
+        public static string SanitizeUserName(string input)
+        {
+            if (!string.IsNullOrWhiteSpace(input))
+            {
+                return input.Replace(System.Environment.UserName, "<user>");
+            }
+            else
+            {
+                throw new System.ArgumentNullException("Value cannot be null.");
+            }
+
         }
     }
 }

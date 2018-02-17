@@ -1,23 +1,17 @@
-﻿using System;
-using MangaRipper.Core.Extensions;
-
-namespace MangaRipper.Core.Models
+﻿namespace MangaRipper.Core.Models
 {
     public class Chapter
     {
-
-        public string OriginalName { get; }
+        public string Manga { get; set; }
+        public string Name { get; set; }
         public int Prefix { get; set; }
-
-        public string Name => Prefix > 0 ? $"[{Prefix:000}] {OriginalName.RemoveFileNameInvalidChar()}" : OriginalName.RemoveFileNameInvalidChar();
-
-        public string Url { get;}
-
-        public Chapter(string originalName, string url)
+        public string DisplayName => Prefix > 0 ? $"[{Prefix:000}] {Name}" : Name;
+        public string Url { get; set; }
+        public string Language { get; set; }
+        public Chapter(string name, string url)
         {
-            OriginalName = originalName;
+            Name = name;
             Url = url;
         }
-
     }
 }
