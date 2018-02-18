@@ -3,6 +3,7 @@ using MangaRipper.Core.Interfaces;
 using MangaRipper.Core.Models;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -13,13 +14,17 @@ namespace MangaRipper.Plugin.KissManga
     /// <summary>
     /// Support find chapters and images from KissManga
     /// </summary>
+    [Export(typeof(IMangaService))]
+    [ExportMetadata("Name", "KissManga")]
+    [ExportMetadata("Url", "http://kissmanga.com/")]
+    [ExportMetadata("Language", "English")]
     public class KissManga : IMangaService
     {
         private static ILogger _logger;
         private readonly IDownloader downloader;
         private IScriptEngine _engine;
         private readonly IXPathSelector selector;
-
+        
         public KissManga(ILogger myLogger, IDownloader downloader, IXPathSelector selector, IScriptEngine engine)
         {
             _logger = myLogger;

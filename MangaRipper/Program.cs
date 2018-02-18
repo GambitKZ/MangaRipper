@@ -11,6 +11,10 @@ using MangaRipper.Core.Models;
 using MangaRipper.Core;
 using MangaRipper.Infrastructure;
 using MangaRipper.Core.Outputers;
+using System.ComponentModel.Composition;
+using System.Collections.Generic;
+using System.ComponentModel.Composition.Hosting;
+using MangaRipper.Helpers;
 
 namespace MangaRipper
 {
@@ -18,6 +22,9 @@ namespace MangaRipper
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         private static Container container;
+
+        //[ImportMany(typeof(IMangaService))]
+        //IEnumerable<IMangaService> plugins;
 
         /// <summary>
         ///     The main entry point for the application.
@@ -32,7 +39,9 @@ namespace MangaRipper
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            Bootstrap();
+            container = new IocContainer().GetContainer();
+
+            //Bootstrap();
             Application.Run(container.GetInstance<FormMain>());
             Logger.Info("< Main()");
         }
@@ -52,6 +61,7 @@ namespace MangaRipper
                c => true
                );
 
+            //Compose();
 
             container.Register<IOutputFactory, OutputFactory>();
 
@@ -74,5 +84,13 @@ namespace MangaRipper
             container.RegisterDecorator<IDownloader, DownloadLogging>();
             //container.Verify();
         }
+
+        //private void Compose()
+        //{
+        //    var dirCatalog = new DirectoryCatalog(Path.Combine(Environment.CurrentDirectory, "Plugins"));
+        //    var catalog = new AggregateCatalog(dirCatalog);
+        //    var composContainer = new CompositionContainer(catalog);
+        //    composContainer.ComposeParts(this);
+        //}
     }
 }
