@@ -20,14 +20,15 @@ namespace MangaRipper.Plugin.KissManga
     [ExportMetadata("Language", "English")]
     public class KissManga : IMangaService
     {
-        private static ILogger _logger;
+        //private static ILogger _logger;
         private readonly IDownloader downloader;
         private IScriptEngine _engine;
         private readonly IXPathSelector selector;
-        
-        public KissManga(ILogger myLogger, IDownloader downloader, IXPathSelector selector, IScriptEngine engine)
+
+        [ImportingConstructor]
+        public KissManga([Import("Downloader")] IDownloader downloader, [Import("Selector")] IXPathSelector selector, [Import("Engine")] IScriptEngine engine)
         {
-            _logger = myLogger;
+            //_logger = myLogger;
             this.downloader = downloader;
             this._engine = engine;
             this.selector = selector;
@@ -81,7 +82,7 @@ namespace MangaRipper.Plugin.KissManga
                     {
                         var value = match.Groups["Value"].Value;
                         keys.Add(value);
-                        _logger.Debug($"Script to be executed: {value}");
+                        //_logger.Debug($"Script to be executed: {value}");
                     }
                 }
 
@@ -93,13 +94,13 @@ namespace MangaRipper.Plugin.KissManga
                     }
                     catch (Exception)
                     {
-                        _logger.Fatal($"Source: {input}");
+                        //_logger.Fatal($"Source: {input}");
                         throw new ArgumentException("Cannot decrypt image URIs.");
                     }
                 }
                 else
                 {
-                    _logger.Debug("Keys not found. Continuing.");
+                    //_logger.Debug("Keys not found. Continuing.");
                 }
 
                 /// As with the script locations, to avoid unnecessary breaking the application, the function name could be captured and invoked 
@@ -118,8 +119,8 @@ namespace MangaRipper.Plugin.KissManga
                     }
                     catch (Exception ex)
                     {
-                        _logger.Fatal($"Source: {input}");
-                        _logger.Fatal(ex);
+                        //_logger.Fatal($"Source: {input}");
+                        //_logger.Fatal(ex);
                         throw;
                     }
 
@@ -164,20 +165,20 @@ namespace MangaRipper.Plugin.KissManga
 
         private IEnumerable<string> Parse(string regExp, string input, string groupName)
         {
-            _logger.Info($"> Parse: {regExp}");
+            //_logger.Info($"> Parse: {regExp}");
             var reg = new Regex(regExp, RegexOptions.IgnoreCase);
             var matches = reg.Matches(input);
 
             if (matches.Count == 0)
             {
-                _logger.Error("Cannot parse the below content.");
-                _logger.Error(input);
+                //_logger.Error("Cannot parse the below content.");
+                //_logger.Error(input);
                 throw new MangaRipperException("Parse content failed! Please check if you can access this content on your browser.");
             }
 
             var list = (from Match match in matches select match.Groups[groupName].Value.Trim()).ToList();
             var result = list.Distinct().ToList();
-            _logger.Info($@"Parse success. There are {result.Count} item(s).");
+            //_logger.Info($@"Parse success. There are {result.Count} item(s).");
             return result;
         }
     }
